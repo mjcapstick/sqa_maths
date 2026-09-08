@@ -1,0 +1,10 @@
+{
+  "description": "Provides Scottish maths exam students with easy access to past papers and topic-based questions, featuring in-app PDF previews and downloads for efficient study.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

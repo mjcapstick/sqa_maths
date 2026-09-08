@@ -1,75 +1,47 @@
-# React + TypeScript + Vite
+# SQA Maths Study — Prototype
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Front-end-only study resource for Scottish SQA Mathematics (National 5 and Higher).
 
-Currently, two official plugins are available:
+## Running locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+pnpm install
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+The dev server starts on `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Adding real content
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+All mock data lives in **`src/data/content.ts`**. Swap any `SAMPLE_PDF` URL for the real hosted PDF path.
 
+### Past papers
+
+```ts
+{ year: 2024, paperNumber: 1, paperUrl: "/pdfs/n5-2024-p1.pdf", solutionsUrl: "/pdfs/n5-2024-p1-solutions.pdf" }
 ```
+
+### Topic workbooks
+
+```ts
+{ name: "Expanding Brackets", workbookUrl: "/pdfs/algebra-brackets.pdf", answersUrl: "/pdfs/algebra-brackets-answers.pdf" }
+```
+
+Place PDF files in `public/pdfs/` to serve them from the Vite root, or use absolute CDN/S3 URLs.
+
+## Routes
+
+| Path | Page |
+|------|------|
+| `/` | Level select (National 5 / Higher) |
+| `/:level` | Mode select (Past Papers / By Topic) |
+| `/:level/past-papers` | Papers grouped by year |
+| `/:level/topics` | Topic grid |
+| `/:level/topics/:topic` | Subtopic list with Workbook + Answers |
+
+## Tech stack
+
+- React 19 + TypeScript + Vite 8
+- Tailwind CSS v4
+- React Router v7 (Data mode)
+- react-pdf v10 (pdf.js) — lazy-loaded per modal open

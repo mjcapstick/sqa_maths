@@ -1,165 +1,200 @@
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { api } from "../api";
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-type PdfTarget = { fileId: string; title: string };
-
-type PdfContextValue = {
-  openPdf: (target: PdfTarget) => void;
+type Props = {
+  url: string;
+  title: string;
+  onClose: () => void;
 };
 
-const PdfContext = createContext<PdfContextValue | null>(null);
+export default function PDFModal({ url, title, onClose }: Props) {
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
 
-export function usePdfModal() {
-  const ctx = useContext(PdfContext);
-  if (!ctx) throw new Error("usePdfModal must be used within PdfProvider");
-  return ctx;
-}
-
-export function PdfProvider({ children }: { children: React.ReactNode }) {
-  const [target, setTarget] = useState<PdfTarget | null>(null);
-  const openPdf = useCallback((next: PdfTarget) => setTarget(next), []);
-  return (
-    <PdfContext.Provider value={{ openPdf }}>
-      {children}
-      {target && <PdfModal target={target} onClose={() => setTarget(null)} />}
-    </PdfContext.Provider>
-  );
-}
-
-function PdfModal({ target, onClose }: { target: PdfTarget; onClose: () => void }) {
-  const titleId = useId();
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const [url, setUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState(0);
-  const [page, setPage] = useState(1);
-  const [width, setWidth] = useState(640);
-
+  // Close on Escape
   useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Trap scroll on body
   useEffect(() => {
-    const measure = () => setWidth(Math.min(720, window.innerWidth - 48));
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  // Measure container for responsive page width
+  const measureContainer = useCallback(() => {
+    if (containerRef.current) {
+      setContainerWidth(containerRef.current.clientWidth - 32);
+    }
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    setUrl(null);
-    setError(null);
-    setNumPages(0);
-    setPage(1);
-    api
-      .fileUrl(target.fileId)
-      .then((signed) => {
-        if (!cancelled) setUrl(signed.url);
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [target.fileId]);
+    measureContainer();
+    const ro = new ResizeObserver(measureContainer);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [measureContainer]);
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === backdropRef.current) onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-950/40"
-        aria-label="Close PDF preview"
-        onClick={onClose}
-      />
+    <div
+      ref={backdropRef}
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`PDF viewer: ${title}`}
+    >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[92vh] w-full max-w-3xl flex-col rounded-t-2xl bg-white shadow-soft sm:rounded-2xl"
+        className="flex flex-col w-full max-w-3xl rounded-xl overflow-hidden shadow-2xl"
+        style={{ backgroundColor: "var(--color-surface)", maxHeight: "90vh" }}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-ink-200 px-4 py-3">
-          <h2 id={titleId} className="truncate text-sm font-semibold text-ink-950">
-            {target.title}
-          </h2>
-          <div className="flex shrink-0 items-center gap-2">
-            {url && (
-              <a
-                href={url}
-                download
-                className="inline-flex min-h-10 items-center rounded-lg bg-accent px-3 text-sm font-medium text-white hover:bg-accent-hover"
-              >
-                Download
-              </a>
-            )}
-            <button
-              ref={closeRef}
-              type="button"
-              onClick={onClose}
-              className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg border border-ink-200 text-ink-700 hover:bg-ink-100"
-              aria-label="Close"
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-5 py-3 border-b shrink-0"
+          style={{ borderColor: "var(--color-border)" }}
+        >
+          <span
+            className="text-sm font-medium truncate"
+            style={{ color: "var(--color-ink)" }}
+          >
+            {title}
+          </span>
+          <div className="flex items-center gap-2 ml-4 shrink-0">
+            <a
+              href={url}
+              download
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+              style={{
+                backgroundColor: "var(--color-accent)",
+                color: "#fff",
+              }}
+              aria-label={`Download ${title}`}
             >
-              ×
+              <DownloadIcon />
+              Download
+            </a>
+            <button
+              onClick={onClose}
+              className="flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-slate-100"
+              style={{ color: "var(--color-ink-muted)" }}
+              aria-label="Close PDF viewer"
+            >
+              <CloseIcon />
             </button>
           </div>
         </div>
-        <div className="min-h-[50vh] overflow-auto bg-ink-100 px-3 py-4">
-          {error && <p className="text-sm text-red-700">{error}</p>}
-          {!error && !url && <p className="text-sm text-ink-500">Fetching a signed link…</p>}
-          {url && (
-            <div className="mx-auto w-fit overflow-hidden rounded-lg bg-white shadow-soft">
-              <Document
-                file={url}
-                onLoadSuccess={({ numPages: next }) => setNumPages(next)}
-                loading={<p className="p-8 text-sm text-ink-500">Rendering PDF…</p>}
-                error={<p className="p-8 text-sm text-red-700">Could not render this PDF. Use Download instead.</p>}
-              >
-                <Page pageNumber={page} width={width} />
-              </Document>
-            </div>
+
+        {/* PDF area */}
+        <div
+          ref={containerRef}
+          className="overflow-y-auto p-4"
+          style={{ backgroundColor: "var(--color-surface-sunken)" }}
+        >
+          {containerWidth > 0 && (
+            <Document
+              file={url}
+              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+              loading={
+                <div className="flex items-center justify-center h-64">
+                  <Spinner />
+                </div>
+              }
+              error={
+                <div
+                  className="flex flex-col items-center justify-center h-64 gap-3"
+                  style={{ color: "var(--color-ink-muted)" }}
+                >
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <p className="text-sm">Could not load PDF. Try the download button.</p>
+                </div>
+              }
+            >
+              {Array.from({ length: numPages ?? 0 }, (_, i) => (
+                <Page
+                  key={i + 1}
+                  pageNumber={i + 1}
+                  width={containerWidth}
+                  className="mb-4 rounded shadow-sm overflow-hidden"
+                  renderAnnotationLayer
+                  renderTextLayer
+                />
+              ))}
+            </Document>
           )}
         </div>
-        {numPages > 1 && (
-          <div className="flex items-center justify-between border-t border-ink-200 px-4 py-2 text-sm">
-            <button
-              type="button"
-              className="rounded-lg px-3 py-2 font-medium text-ink-700 disabled:text-ink-400"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </button>
-            <span className="text-ink-500">
-              Page {page} of {numPages}
-            </span>
-            <button
-              type="button"
-              className="rounded-lg px-3 py-2 font-medium text-ink-700 disabled:text-ink-400"
-              disabled={page >= numPages}
-              onClick={() => setPage((p) => Math.min(numPages, p + 1))}
-            >
-              Next
-            </button>
+
+        {/* Page count footer */}
+        {numPages && (
+          <div
+            className="px-5 py-2 border-t text-xs shrink-0"
+            style={{
+              borderColor: "var(--color-border)",
+              color: "var(--color-ink-faint)",
+            }}
+          >
+            {numPages} {numPages === 1 ? "page" : "pages"}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      className="animate-spin"
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--color-accent)"
+      strokeWidth="2.5"
+      aria-label="Loading"
+    >
+      <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
+      <path d="M12 2a10 10 0 0 1 10 10" />
+    </svg>
   );
 }

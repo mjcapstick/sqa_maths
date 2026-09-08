@@ -1,90 +1,72 @@
-import { NavLink, Outlet, useParams } from "react-router-dom";
-import { BookIcon, DocumentIcon } from "./ModeTag";
+import { Link } from "react-router";
 
-const navClass = ({ isActive }: { isActive: boolean }) =>
-  [
-    "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-    isActive ? "bg-ink-100 text-ink-950" : "text-ink-700 hover:bg-ink-100 hover:text-ink-950",
-  ].join(" ");
-
-export function Layout() {
-  const { examLevel } = useParams();
-
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-20 border-b border-ink-200/80 bg-ink-50/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <NavLink to="/" className="flex items-center gap-2 font-semibold tracking-tight text-ink-950">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-xs font-bold text-white">
-              M
-            </span>
-            SQA Maths
-          </NavLink>
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
-            <NavLink to="/" className={navClass} end>
-              Levels
-            </NavLink>
-            {examLevel && (
-              <>
-                <NavLink to={`/${examLevel}/past-papers`} className={navClass}>
-                  Past papers
-                </NavLink>
-                <NavLink to={`/${examLevel}/topics`} className={navClass}>
-                  By topic
-                </NavLink>
-              </>
-            )}
-            <NavLink to="/admin" className={navClass}>
-              Upload
-            </NavLink>
-          </nav>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-8 md:pb-12">
-        <Outlet />
+    <div className="min-h-full flex flex-col">
+      <Header />
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        {children}
       </main>
-
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-20 border-t border-ink-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-        aria-label="Mobile"
+      <footer
+        className="border-t py-6 text-center text-xs"
+        style={{
+          borderColor: "var(--color-border)",
+          color: "var(--color-ink-faint)",
+        }}
       >
-        <div className="mx-auto grid max-w-5xl grid-cols-3">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-xs font-medium ${
-                isActive ? "text-accent" : "text-ink-500"
-              }`
-            }
-          >
-            Home
-          </NavLink>
-          <NavLink
-            to={examLevel ? `/${examLevel}/past-papers` : "/"}
-            className={({ isActive }) =>
-              `flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-xs font-medium ${
-                isActive ? "text-accent" : "text-ink-500"
-              }`
-            }
-          >
-            <DocumentIcon />
-            Papers
-          </NavLink>
-          <NavLink
-            to={examLevel ? `/${examLevel}/topics` : "/"}
-            className={({ isActive }) =>
-              `flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-xs font-medium ${
-                isActive ? "text-accent" : "text-ink-500"
-              }`
-            }
-          >
-            <BookIcon />
-            Topics
-          </NavLink>
-        </div>
-      </nav>
+        SQA Maths Study · prototype
+      </footer>
     </div>
+  );
+}
+
+function Header() {
+  return (
+    <header
+      className="sticky top-0 z-40 border-b"
+      style={{
+        backgroundColor: "rgba(255,255,255,0.92)",
+        backdropFilter: "blur(12px)",
+        borderColor: "var(--color-border)",
+      }}
+    >
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
+        {/* Logo */}
+        <Link
+          to="/"
+          className="flex items-center gap-2 font-semibold text-sm tracking-tight"
+          style={{ color: "var(--color-ink)" }}
+          aria-label="SQA Maths Study home"
+        >
+          <span
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-sm font-bold"
+            style={{ backgroundColor: "var(--color-accent)", color: "#fff" }}
+            aria-hidden="true"
+          >
+            ∑
+          </span>
+          SQA Maths
+        </Link>
+
+        <nav className="flex items-center gap-1" aria-label="Site">
+          <Link
+            to="/about"
+            className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+            style={{ color: "var(--color-ink-muted)" }}
+          >
+            About Us
+          </Link>
+          <a
+            href="https://buymeacoffee.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+            style={{ backgroundColor: "var(--color-accent)", color: "#fff" }}
+          >
+            ☕ Buy Us A Coffee
+          </a>
+        </nav>
+      </div>
+    </header>
   );
 }
